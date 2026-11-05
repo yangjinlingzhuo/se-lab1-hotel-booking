@@ -2,25 +2,39 @@
 title 酒店预订系统 · 模块划分与依赖（包图）
 
 skinparam packageStyle rectangle
+hide <<layer>> stereotype
 skinparam shadowing false
 skinparam defaultFontName "PingFang SC"
 skinparam dpi 150
-skinparam ArrowColor #6B7280
-skinparam ArrowThickness 1.1
+skinparam title {
+  FontColor #14524A
+  FontSize 20
+}
+skinparam ArrowColor #7FA99B
+skinparam ArrowThickness 1.2
+skinparam ArrowFontColor #3D5A50
+skinparam ArrowFontSize 12
 skinparam package {
-  BackgroundColor #FBFBFB
-  BorderColor #9CA3AF
-  FontColor #111827
+  BackgroundColor #FFFFFF
+  BorderColor #4E9A8A
+  FontColor #1A3A34
   FontSize 14
 }
+skinparam package<<layer>> {
+  BackgroundColor #E9F5F0
+  BorderColor #2E7D6B
+  FontColor #14524A
+  FontSize 15
+  FontStyle bold
+}
 skinparam note {
-  BackgroundColor #F3F6F5
-  BorderColor #1E6E64
-  FontColor #1F2937
+  BackgroundColor #F0F9F4
+  BorderColor #2E7D6B
+  FontColor #1F3A33
   FontSize 12
 }
 
-package "表现层 Presentation" {
+package "表现层 Presentation" <<layer>> {
   package "顾客端"
   package "酒店工作台"
   package "平台管理后台"
@@ -28,31 +42,31 @@ package "表现层 Presentation" {
   "酒店工作台" -[hidden]r- "平台管理后台"
 }
 
-package "应用层 Application" {
+package "应用层 Application" <<layer>> {
   package "查询与报价"
   package "预订"
   package "订单履约"
-  package "改订"
   package "酒店与库存管理"
   package "账户与权限"
+  package "改订"
   package "统计"
   package "日志"
   "查询与报价" -[hidden]r- "预订"
   "预订" -[hidden]r- "订单履约"
-  "订单履约" -[hidden]r- "改订"
-  "改订" -[hidden]r- "酒店与库存管理"
+  "订单履约" -[hidden]r- "酒店与库存管理"
   "酒店与库存管理" -[hidden]r- "账户与权限"
-  "账户与权限" -[hidden]r- "统计"
+  "账户与权限" -[hidden]r- "改订"
+  "改订" -[hidden]r- "统计"
   "统计" -[hidden]r- "日志"
 }
 
-package "领域层 Domain" {
+package "领域层 Domain" <<layer>> {
   package "领域模型"
   package "领域规则"
   "领域模型" -[hidden]r- "领域规则"
 }
 
-package "基础设施层 Infrastructure" {
+package "基础设施层 Infrastructure" <<layer>> {
   package "数据持久化"
   package "定时任务"
   package "认证与安全"
@@ -64,26 +78,29 @@ package "基础设施层 Infrastructure" {
 "表现层 Presentation" -[hidden]d- "应用层 Application"
 "应用层 Application" -[hidden]d- "领域层 Domain"
 "领域层 Domain" -[hidden]d- "基础设施层 Infrastructure"
-"顾客端" -[hidden]d- "查询与报价"
+"顾客端" -[hidden]d- "预订"
 "酒店工作台" -[hidden]d- "订单履约"
 "平台管理后台" -[hidden]d- "账户与权限"
+"订单履约" -[hidden]d- "领域规则"
+"查询与报价" -[hidden]d- "领域模型"
+"领域模型" -[hidden]d- "数据持久化"
+"领域规则" -[hidden]d- "定时任务"
+"账户与权限" -[hidden]d- "认证与安全"
 
 ' 表现层 -> 应用层
 "顾客端" ..> "查询与报价" : 组合查询·逐晚报价
 "顾客端" ..> "预订" : 提交订单
-"酒店工作台" ..> "酒店与库存管理" : 维护价格库存
 "酒店工作台" ..> "订单履约" : 确认·入住·退房
+"酒店工作台" ..> "酒店与库存管理" : 维护价格库存
 "平台管理后台" ..> "账户与权限" : 授权工作人员
 
 ' 应用层 -> 领域层
+"查询与报价" ..> "领域模型" : 读取模型
 "预订" ..> "领域规则" : 状态机·库存检查
 "订单履约" ..> "领域规则" : 转换合法性
 "改订" ..> "领域规则" : 差额库存替换
-"查询与报价" ..> "领域模型" : 读取模型
 
 ' 应用层 -> 基础设施层
-"订单履约" ..> "日志" : 关键操作留痕
-"应用层 Application" ..> "数据持久化" : 仓储接口存取
 "账户与权限" ..> "认证与安全" : 身份核验
 
 ' 基础设施层支撑
@@ -91,15 +108,11 @@ package "基础设施层 Infrastructure" {
 
 note as N1
   <b>说明</b>
+  · 应用层各模块统一通过仓储接口访问「数据持久化」（事务与并发控制）
   · 定时任务触发后调用应用层：确认超时、未到店 → 订单履约；申请过期 → 改订
+  · 各模块的关键操作统一写入「日志」，按权限查询
   · 领域层不依赖任何外层：状态转换、库存一致性、报价计算统一由领域规则判断，
     应用层只负责编排流程
 end note
-"数据持久化" -[hidden]d- N1
-
-' 纵向脊柱对齐
-"预订" -[hidden]d- "领域规则"
-"领域规则" -[hidden]d- "定时任务"
-"领域模型" -[hidden]d- "数据持久化"
 
 @enduml
