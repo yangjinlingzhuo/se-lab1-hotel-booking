@@ -14,5 +14,5 @@
     └── design/              # 实验二：设计与建模
         ├── UML/             # PlantUML 源码与 PNG
         ├── UI界面/          # 十二个界面原型
-        └── process/         # 实验报告.md、AI使用记录.md、report.css
+        └── process/         # 软件设计与建模说明.md、AI使用记录.md、report.css
 ```
