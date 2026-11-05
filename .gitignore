@@ -1,0 +1,11 @@
+# cslab-cms 用压缩包目录（本地打包上传，整个目录不入 Git 仓库）
+deliverables/
+
+# 实验报告 PDF 本地生成，用于 CMS 打包，不入库
+docs/design/实验报告.pdf
+
+# 课程作业说明原文，仅本地参考，不入库
+docs/design/process/作业描述.txt
+
+# 类图人工审查意见，仅本地留存，不入库
+docs/design/process/类图反馈意见.txt
