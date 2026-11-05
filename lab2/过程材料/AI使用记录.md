@@ -54,7 +54,12 @@
 - 「领域规则」三包（订单状态机 / 库存策略 / 报价策略）也落成类，与包图架构呼应；库存策略的差额替换对应 REQ-013。
 - 两条关键不变式写入图例：每日库存「房型+日期唯一、可售数 ≥ 0」（REQ-003）、价格快照冻结（REQ-005）。
 
-5. **第 5~7 版（人工反馈驱动，当前稿）**：本人要求重构布局——填满画面、连线必须为直线。修改：`linetype polyline` 改曲线为直线段；OperationLog 移至 User 左侧、Customer 与 Order 垂直对齐、库存约束注释挂回 DailyInventory 左侧，消除大折线与误导性连线，画面呈方形且分布均匀。
+5. **第 5~7 版（人工反馈驱动）**：本人要求重构布局——填满画面、连线必须为直线。修改：`linetype polyline` 改曲线为直线段；OperationLog 移至 User 左侧、Customer 与 Order 垂直对齐、库存约束注释挂回 DailyInventory 左侧，消除大折线与误导性连线，画面呈方形且分布均匀。
+6. **第 8~9 版（人工反馈驱动，当前稿）**：本人提供书面修改意见（`过程材料/类图反馈意见.txt`，含 P0~P2 优先级），据此全面修订：
+   - P0 语义修正：Customer—Order 组合改普通关联（用户注销不应删除历史订单）；ChangeRequest 改 0..* 并加"同一时刻最多一个待处理"约束（支持历史改订记录）；DailyInventory 拆分 reserved（已预订未入住）与 occupied（实际入住），available 改为派生属性 `/available`。
+   - P1 规范化：HotelStaff 删除外键 hotelId（关联已表达，类图不画成 ER 图）；OperationLog 字段类型化（OperationType/TargetType/Status/UUID）；User 移除 verifyLogin（认证属于 AuthenticationService），注明角色按账号互斥；Order 增加 actualCheckInAt/actualCheckOutAt（REQ-017）；DailyPrice 增加 currency；ChangeRequest 增加 createdAt/processedAt/processedBy。
+   - P2 布局：按"用户权限/预订/酒店/库存价格"四分区重排，连线全部直线无交叉。
+：本人要求重构布局——填满画面、连线必须为直线。修改：`linetype polyline` 改曲线为直线段；OperationLog 移至 User 左侧、Customer 与 Order 垂直对齐、库存约束注释挂回 DailyInventory 左侧，消除大折线与误导性连线，画面呈方形且分布均匀。
 ：本人审查后认为中文版「太复杂」，并提供一张英文简约风格的 PlantUML 类图样例作为目标。据此重做：类名、属性、方法全部改为英文（属性私有 `-`、方法公有 `+`，与样例图标一致）；删除包框、领域规则策略类与枚举框，只保留 11 个领域模型类；样式回归 PlantUML 默认灰白风格（与样例一致）；加隐藏辅助线让布局呈方形而非长条。
 
 ### 优缺点分析（待本人补充）

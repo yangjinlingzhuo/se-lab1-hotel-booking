@@ -2,26 +2,23 @@
 title Hotel Booking System - Domain Class Diagram
 
 skinparam dpi 150
-skinparam linetype polyline
 skinparam defaultFontName "Helvetica Neue"
 skinparam classAttributeIconSize 3
+skinparam linetype polyline
 
 class User {
-  -userId: string
+  -userId: UUID
   -name: string
   -phone: string
   -passwordHash: string
-  +verifyLogin(pwd: string): bool
 }
 
 class Customer
-class HotelStaff {
-  -hotelId: string
-}
+class HotelStaff
 class PlatformAdmin
 
 class Hotel {
-  -hotelId: string
+  -hotelId: UUID
   -name: string
   -city: string
   -address: string
@@ -33,7 +30,7 @@ class Hotel {
 }
 
 class RoomType {
-  -roomTypeId: string
+  -roomTypeId: UUID
   -name: string
   -bedType: string
   -capacity: int
@@ -46,8 +43,9 @@ class DailyInventory {
   -date: date
   -capacity: int
   -blocked: int
+  -reserved: int
   -occupied: int
-  +available(): int
+  /available: int
   +occupy(n: int): bool
   +release(n: int): void
 }
@@ -55,6 +53,7 @@ class DailyInventory {
 class DailyPrice {
   -date: date
   -price: money
+  -currency: string
 }
 
 class Order {
@@ -67,6 +66,8 @@ class Order {
   -contactPhone: string
   -totalPrice: money
   -createdAt: datetime
+  -actualCheckInAt: datetime
+  -actualCheckOutAt: datetime
   +confirm(): void
   +reject(reason: string): void
   +cancel(): void
@@ -81,60 +82,84 @@ class OrderNight {
 }
 
 class ChangeRequest {
-  -newRoomTypeId: string
+  -newRoomTypeId: UUID
   -newCheckIn: date
   -newCheckOut: date
   -newRoomCount: int
   -quotedPrice: money
-  -expireAt: datetime
   -status: ChangeStatus
+  -createdAt: datetime
+  -processedAt: datetime
+  -processedBy: UUID
+  -expireAt: datetime
   +approve(): bool
   +reject(reason: string): void
 }
 
 class OperationLog {
-  -operatorId: string
-  -action: string
-  -beforeStatus: string
-  -afterStatus: string
+  -operationId: UUID
+  -action: OperationType
+  -targetType: TargetType
+  -targetId: UUID
+  -beforeStatus: Status
+  -afterStatus: Status
   -reason: string
-  -requestId: string
-  -time: datetime
+  -createdAt: datetime
 }
 
-' 布局辅助
+' 布局辅助（四分区：用户权限 / 预订 / 酒店 / 库存价格）
 OperationLog -[hidden]r- User
+User -[hidden]d- Customer
+Customer -[hidden]r- HotelStaff
+HotelStaff -[hidden]r- PlatformAdmin
+HotelStaff -[hidden]d- Hotel
 Customer -[hidden]d- Order
+OrderNight -[hidden]r- Order
 Order -[hidden]r- Hotel
+Order -[hidden]d- ChangeRequest
 Hotel -[hidden]d- RoomType
 RoomType -[hidden]d- DailyInventory
 DailyInventory -[hidden]r- DailyPrice
-Order -[hidden]d- ChangeRequest
-Order -[hidden]r- OrderNight
 
+' 继承
 User <|-- Customer
 User <|-- HotelStaff
 User <|-- PlatformAdmin
 
-HotelStaff "n" --> "1" Hotel : belongs to
+' 关联与组合
+Hotel "1" -- "0..*" HotelStaff : employs
 Hotel "1" *-- "n" RoomType
 RoomType "1" *-- "n" DailyInventory
 RoomType "1" *-- "n" DailyPrice
-Customer "1" *-- "n" Order : places
+Customer "1" -- "0..*" Order : places
 Order "n" --> "1" Hotel
 Order "n" --> "1" RoomType
 Order "1" *-- "n" OrderNight : occupies
-Order "1" *-- "0..1" ChangeRequest : pending
-OperationLog "n" --> "1" User : operated by
+Order "1" *-- "0..*" ChangeRequest : changeRequests
+OperationLog "0..*" -- "1" User : performed by
 
 note left of DailyInventory
   unique (roomType, date)
-  available = capacity - blocked - occupied >= 0
+  /available = capacity - blocked
+    - reserved - occupied >= 0
+  reserved: booked not yet checked in
+  occupied: actually checked in
 end note
 
 note left of Order
   totalPrice and OrderNight prices are
   frozen snapshots at booking time (REQ-005)
+end note
+
+note bottom of ChangeRequest
+  at most one PENDING ChangeRequest
+  per Order at any time (REQ-012)
+end note
+
+note right of User
+  roles are mutually exclusive per account;
+  authentication is handled by
+  AuthenticationService, not User
 end note
 
 @enduml
