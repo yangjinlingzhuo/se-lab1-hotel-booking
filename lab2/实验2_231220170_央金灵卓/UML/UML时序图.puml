@@ -1,52 +1,46 @@
 @startuml UML时序图
-title 预订下单与酒店确认时序图（REQ-005~011）
+title Booking and Hotel Confirmation Sequence Diagram (REQ-005~011)
 
 skinparam dpi 150
-skinparam defaultFontName "PingFang SC"
+skinparam defaultFontName "Helvetica Neue"
 
-actor 顾客
-participant "查询与报价" as Search
-participant "预订" as Booking
-participant "订单履约" as Fulfill
-participant "报价策略" as Pricing
-participant "库存策略" as Inventory
-participant "数据持久化" as DB
-actor "酒店工作人员" as Staff
+actor Customer
+participant "SearchService" as Search
+participant "BookingService" as Booking
+participant "FulfillmentService" as Fulfill
+participant "PricingPolicy" as Pricing
+participant "InventoryPolicy" as Inventory
+participant "Persistence" as DB
+actor "HotelStaff" as Staff
 
-顾客 -> Search : 组合查询(城市/日期/人数)
-Search -> Inventory : 逐夜可订检查(房型, 区间, 间数)
-Inventory -> DB : 读取每日库存
-DB --> Inventory : 库存记录
-Search -> Pricing : 逐晚报价(房型, 区间, 间数)
-Pricing -> DB : 读取每日价格
-DB --> Pricing : 价格记录
-Pricing --> Search : 每晚价格 + 总价
-Search --> 顾客 : 可订列表(含总价)
+Customer -> Search : search(city, dates, guests)
+Search -> Inventory : checkNightlyAvailability(roomType, range, rooms)
+Inventory -> DB : load daily inventory
+DB --> Inventory : inventory records
+Search -> Pricing : quote(roomType, range, rooms)
+Pricing -> DB : load daily prices
+DB --> Pricing : price records
+Pricing --> Search : nightly prices + total
+Search --> Customer : available list (with totals)
 
-顾客 -> Booking : 提交订单(联系人, 请求标识)
-note right of Booking : 相同请求标识返回已有订单\n重复提交不多建单（REQ-009）
-Booking -> Pricing : 重新计算报价
-Pricing --> Booking : 当前报价
-Booking -> Inventory : 占用全部夜晚(订单)
-Inventory -> DB : 事务：创建订单 + 逐夜占用
+Customer -> Booking : submitOrder(contact, requestId)
+note right of Booking : same requestId returns the existing order\nidempotent, no duplicate orders (REQ-009)
+Booking -> Pricing : recompute quote
+Pricing --> Booking : current quote
+Booking -> Inventory : occupyAllNights(order)
+Inventory -> DB : transaction: create order + nightly occupancy
+note right of DB : atomic: if the price changed or any night\nis short, roll back and reject (REQ-008/023)\ncustomer is asked to re-query
+DB --> Inventory : committed
+Inventory --> Booking : occupied
+Booking -> DB : write operation log
+Booking --> Customer : orderNo + PENDING
 
-alt 校验失败（价格已变动或库存不足）
-  DB --> Inventory : 回滚，不留部分占用
-  Inventory --> Booking : 失败
-  Booking --> 顾客 : 下单失败：价格已变动或缺房，请重新查询
-else 全部夜晚可订
-  DB --> Inventory : 提交成功
-  Inventory --> Booking : 占用完成
-  Booking -> DB : 写入操作日志
-  Booking --> 顾客 : 订单号 + 待确认
-end
+== Hotel confirmation (within 30 min, REQ-010) ==
 
-== 酒店确认（30分钟内，REQ-010）==
-
-Staff -> Fulfill : 确认(订单号)
-Fulfill -> DB : 校验状态并更新为已确认
-note right of Fulfill : 仅 待确认→已确认 合法\n确认不重复扣库存（REQ-010/025）
-DB --> Fulfill : 更新成功
-Fulfill --> Staff : 已确认
+Staff -> Fulfill : confirm(orderNo)
+Fulfill -> DB : validate state and set CONFIRMED
+note right of Fulfill : only PENDING -> CONFIRMED is allowed\nno duplicate stock deduction (REQ-010/025)
+DB --> Fulfill : updated
+Fulfill --> Staff : CONFIRMED
 
 @enduml
