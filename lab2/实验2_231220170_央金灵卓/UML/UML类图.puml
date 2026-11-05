@@ -2,6 +2,7 @@
 title Hotel Booking System - Domain Class Diagram
 
 skinparam dpi 150
+skinparam linetype polyline
 skinparam defaultFontName "Helvetica Neue"
 skinparam classAttributeIconSize 3
 
@@ -102,6 +103,8 @@ class OperationLog {
 }
 
 ' 布局辅助
+OperationLog -[hidden]r- User
+Customer -[hidden]d- Order
 Order -[hidden]r- Hotel
 Hotel -[hidden]d- RoomType
 RoomType -[hidden]d- DailyInventory
@@ -124,7 +127,7 @@ Order "1" *-- "n" OrderNight : occupies
 Order "1" *-- "0..1" ChangeRequest : pending
 OperationLog "n" --> "1" User : operated by
 
-note right of DailyInventory
+note left of DailyInventory
   unique (roomType, date)
   available = capacity - blocked - occupied >= 0
 end note
