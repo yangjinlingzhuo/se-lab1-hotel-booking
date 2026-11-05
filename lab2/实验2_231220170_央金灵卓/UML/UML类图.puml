@@ -1,0 +1,223 @@
+@startuml UML类图
+title 酒店预订系统 · 领域类图
+
+left to right direction
+hide <<policy>> stereotype
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName "PingFang SC"
+skinparam dpi 150
+skinparam title {
+  FontColor #14524A
+  FontSize 20
+}
+skinparam ArrowColor #7FA99B
+skinparam ArrowThickness 1.2
+skinparam ArrowFontColor #3D5A50
+skinparam ArrowFontSize 12
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #4E9A8A
+  FontColor #1A3A34
+  FontSize 13
+  AttributeFontSize 12
+  MethodFontSize 12
+}
+skinparam class<<policy>> {
+  BackgroundColor #E9F5F0
+  BorderColor #2E7D6B
+}
+skinparam enum {
+  BackgroundColor #F0F9F4
+  BorderColor #2E7D6B
+  FontColor #1A3A34
+}
+skinparam note {
+  BackgroundColor #F0F9F4
+  BorderColor #2E7D6B
+  FontColor #1F3A33
+  FontSize 12
+}
+
+package "领域模型" <<Frame>> {
+  class 用户 {
+    用户ID : 文本
+    姓名 : 文本
+    手机号 : 文本
+    密码摘要 : 文本
+    +校验登录(密码) : 布尔
+  }
+  class 顾客
+  class 酒店工作人员 {
+    所属酒店ID : 文本
+  }
+  class 平台管理员
+
+  class 酒店 {
+    酒店ID : 文本
+    名称 : 文本
+    城市 : 文本
+    地址 : 文本
+    联系电话 : 文本
+    营业状态 : 酒店状态
+    入住退房规则 : 文本
+    +停业登记(期间, 原因)
+    +恢复营业()
+  }
+  class 房型 {
+    房型ID : 文本
+    名称 : 文本
+    床型 : 文本
+    容量 : 整数
+    设施 : 列表
+    图片 : 列表
+    状态 : 在售/停用
+  }
+  class 每日库存 {
+    房型ID : 文本
+    日期 : 日期
+    容量 : 整数
+    不可售数 : 整数
+    已占用数 : 整数
+    +可售数() : 整数
+    +占用(间数) : 布尔
+    +释放(间数)
+  }
+  class 每日价格 {
+    房型ID : 文本
+    日期 : 日期
+    单价 : 金额
+  }
+
+  class 订单 {
+    订单号 : 文本
+    顾客ID : 文本
+    酒店ID : 文本
+    房型ID : 文本
+    房间数 : 整数
+    入住日期 : 日期
+    退房日期 : 日期
+    状态 : 订单状态
+    联系人姓名 : 文本
+    联系人电话 : 文本
+    总价快照 : 金额
+    创建时间 : 时间
+    +确认()
+    +拒绝(原因)
+    +取消()
+    +办理入住()
+    +办理退房()
+    +超时处理()
+  }
+  class 逐夜明细 {
+    订单ID : 文本
+    住宿日期 : 日期
+    当晚价格快照 : 金额
+  }
+  class 改订单 {
+    改订ID : 文本
+    原订单ID : 文本
+    新房型ID : 文本
+    新入住日期 : 日期
+    新退房日期 : 日期
+    新房间数 : 整数
+    新报价快照 : 金额
+    过期时间 : 时间
+    状态 : 改订状态
+    +通过() : 布尔
+    +拒绝(原因)
+  }
+  class 操作日志 {
+    日志ID : 文本
+    操作人ID : 文本
+    酒店ID : 文本
+    对象类型 : 文本
+    对象ID : 文本
+    动作 : 文本
+    操作前状态 : 文本
+    操作后状态 : 文本
+    结果 : 文本
+    原因 : 文本
+    请求标识 : 文本
+    时间 : 时间
+  }
+  enum 订单状态 {
+    待确认
+    已确认
+    已入住
+    已完成
+    已取消
+    已拒绝
+    已超时
+  }
+  enum 改订状态 {
+    待处理
+    已通过
+    已拒绝
+    已过期
+  }
+  enum 酒店状态 {
+    营业中
+    停业
+  }
+}
+
+package "领域规则" <<Frame>> {
+  class 订单状态机 <<policy>> {
+    +允许转换(当前, 目标) : 布尔
+    +目标状态(当前, 事件) : 订单状态
+  }
+  class 库存策略 <<policy>> {
+    +逐夜可订(房型, 区间, 间数) : 布尔
+    +占用全部夜晚(订单) : 布尔
+    +释放全部夜晚(订单)
+    +差额替换(原方案, 新方案) : 布尔
+  }
+  class 报价策略 <<policy>> {
+    +逐晚报价(房型, 区间, 间数) : 报价
+  }
+  class 报价 {
+    每晚价格 : 列表
+    间数 : 整数
+    总价 : 金额
+  }
+}
+
+' 继承
+用户 <|-- 顾客
+用户 <|-- 酒店工作人员
+用户 <|-- 平台管理员
+
+' 关联与组合
+酒店工作人员 "n" --> "1" 酒店 : 所属
+酒店 "1" *-- "n" 房型
+房型 "1" *-- "n" 每日库存
+房型 "1" *-- "n" 每日价格
+顾客 "1" *-- "n" 订单
+订单 "n" --> "1" 酒店
+订单 "n" --> "1" 房型
+订单 "1" *-- "n" 逐夜明细 : 每晚占用
+订单 "1" *-- "0..1" 改订单 : 待处理改订
+操作日志 "n" --> "1" 用户 : 操作人
+
+' 枚举锚定
+订单 ..> 订单状态
+改订单 ..> 改订状态
+酒店 ..> 酒店状态
+
+' 规则协作
+订单 ..> 订单状态机 : 校验转换
+库存策略 ..> 每日库存 : 读写
+报价策略 ..> 每日价格 : 读取
+报价策略 ..> 报价 : 生成
+库存策略 ..> 订单 : 占用/释放
+
+note as N1
+  <b>说明</b>
+  · 每日库存唯一约束：房型 + 日期 仅一条记录；
+    不变式：可售数 = 容量 − 不可售数 − 已占用数 ≥ 0
+  · 订单总价与逐夜明细保存下单时价格快照，
+    后续改价不影响既有订单（REQ-005）
+end note
+
+@enduml
